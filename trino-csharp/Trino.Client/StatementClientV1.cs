@@ -92,6 +92,7 @@ namespace Trino.Client
             HttpClientHandler handler = this.Session.Properties.CompressionDisabled ? new HttpClientHandler() : new HttpClientHandler() { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate };
 
 
+            X509Certificate2 trustedCaCert = null;
             if (session.Properties.UseSystemTrustStore)
             {
                 handler.ClientCertificateOptions = ClientCertificateOption.Automatic;
@@ -102,8 +103,7 @@ namespace Trino.Client
                 {
                     try
                     {
-                        X509Certificate2 cert = new X509Certificate2(session.Properties.TrustedCertPath);
-                        handler.ClientCertificates.Add(cert);
+                        trustedCaCert = new X509Certificate2(session.Properties.TrustedCertPath);
                     }
                     catch (Exception ex)
                     {
@@ -114,8 +114,7 @@ namespace Trino.Client
                 {
                     try
                     {
-                        X509Certificate2 cert = ConvertPemToX509Certificate(session.Properties.TrustedCertificate);
-                        handler.ClientCertificates.Add(cert);
+                        trustedCaCert = ConvertPemToX509Certificate(session.Properties.TrustedCertificate);
                     }
                     catch (Exception ex)
                     {
@@ -124,7 +123,7 @@ namespace Trino.Client
                 }
             }
 
-            handler.ServerCertificateCustomValidationCallback = (HttpRequestMessage, X509Certificate2, x509Chain, sslPolicyErrors) =>
+            handler.ServerCertificateCustomValidationCallback = (HttpRequestMessage, serverCert, chain, sslPolicyErrors) =>
             {
                 // Allow CN mismatch
                 if (session.Properties.AllowHostNameCNMismatch
@@ -136,10 +135,29 @@ namespace Trino.Client
                 // Allow self-signed certificates
                 if (session.Properties.AllowSelfSignedServerCert
                     && sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors
-                    && x509Chain.ChainStatus.Length == 1
-                    && x509Chain.ChainStatus[0].Status == X509ChainStatusFlags.UntrustedRoot)
+                    && chain.ChainStatus.Length == 1
+                    && chain.ChainStatus[0].Status == X509ChainStatusFlags.UntrustedRoot)
                 {
                     return true;
+                }
+
+                // Handle custom CA validation
+                if (trustedCaCert != null && sslPolicyErrors != SslPolicyErrors.None)
+                {
+                    // Build custom chain with our trusted CA
+                    using (X509Chain customChain = new X509Chain())
+                    {
+                        customChain.ChainPolicy.ExtraStore.Add(trustedCaCert);
+                        customChain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
+                        
+                        if (customChain.Build(serverCert))
+                        {
+                            // Check if chain ends with our trusted CA
+                            var rootCert = customChain.ChainElements[customChain.ChainElements.Count - 1].Certificate;
+                            return rootCert.Thumbprint.Equals(trustedCaCert.Thumbprint, StringComparison.OrdinalIgnoreCase);
+                        }
+                    }
+                    return false;
                 }
 
                 // Default validation is not to allow any policy errors.

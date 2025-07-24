@@ -258,6 +258,7 @@ using (TrinoConnection connection = new TrinoConnection(properties))
 |TraceToken|Token for tracing service integration flow|f1ec1fc3-60f2-48a2-95e8-663c29146351|`tracetoken=f1ec1fc3-60f2-48a2-95e8-663c29146351`|
 |Server|Alternate method of providing host, port, and enableSsl|`new Uri("https://trino.myhost.net");`|n/a|
 |User|The user connecting to the cluster.|user_name|`user=user_name`|
+|UseSystemTrustStore|Use the system's certificate trust store for SSL validation instead of custom certificates.|true|`UseSystemTrustStore=true`|
 
 ## Authentication
 
