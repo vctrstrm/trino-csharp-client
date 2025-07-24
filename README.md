@@ -256,6 +256,8 @@ using (TrinoConnection connection = new TrinoConnection(properties))
 |TestConnection|Connection is tested when Open() is called. Slows down the query.|false|`testconnection=true`|
 |TimeZone|Timezone of Trino client.|`TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time")`|`timezone=UTC`|
 |TraceToken|Token for tracing service integration flow|f1ec1fc3-60f2-48a2-95e8-663c29146351|`tracetoken=f1ec1fc3-60f2-48a2-95e8-663c29146351`|
+|TrustedCertPath|Path to a custom CA certificate file for SSL/TLS validation. Use this when connecting to Trino servers with certificates issued by internal or custom Certificate Authorities.|"/path/to/ca-cert.crt"|`TrustedCertPath=/path/to/ca-cert.crt`|
+|TrustedCertificate|PEM-formatted custom CA certificate string for SSL/TLS validation. Alternative to TrustedCertPath for embedding certificates directly in configuration.|"-----BEGIN CERTIFICATE-----\nMIIC..."|n/a|
 |Server|Alternate method of providing host, port, and enableSsl|`new Uri("https://trino.myhost.net");`|n/a|
 |User|The user connecting to the cluster.|user_name|`user=user_name`|
 |UseSystemTrustStore|Use the system's certificate trust store for SSL validation instead of custom certificates.|true|`UseSystemTrustStore=true`|
